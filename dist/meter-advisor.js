@@ -1,0 +1,21 @@
+window.MeterAdvisor=(()=>{
+ const choices=[{numerator:2,denominator:4,length:2},{numerator:3,denominator:4,length:3},{numerator:4,denominator:4,length:4},{numerator:6,denominator:8,length:3}];
+ function analyze(project){
+  const meters=MidiMeter.normalize(project.timeSignatures),original=meters[0],end=meters[1]?.s??Infinity,tracks=project.tracks.filter(t=>t.notes.length),bins=new Float64Array(3072),low=new Float64Array(3072);let count=0,triplets=0,straight=0,duration=0;
+  for(const t of tracks){const notes=t.notes.filter(n=>n.s>=original.s&&n.s<end&&n.s<original.s+256);if(!notes.length)continue;const scale=1/Math.sqrt(notes.length);for(const n of notes){const at=n.s-original.s,index=Math.round(at*12);if(index>=bins.length)continue;const weight=(.3+.7*n.v/127)*scale*(t.ch%16===9?1.7:1);bins[index]+=weight;if(t.ch%16!==9&&n.p<60)low[index]+=weight;count++;duration=Math.max(duration,at);const f=at%1;if(Math.min(Math.abs(f-1/3),Math.abs(f-2/3))<.045)triplets++;if(Math.abs(f-.5)<.045)straight++}}
+  function correlation(length){const lag=Math.round(length*12),limit=Math.min(bins.length,Math.ceil(duration*12)+1);let dot=0,a=0,b=0;for(let i=lag;i<limit;i++){const x=bins[i]+low[i],y=bins[i-lag]+low[i-lag];dot+=x*y;a+=x*x;b+=y*y}return a&&b?dot/Math.sqrt(a*b):0}
+  const compound=triplets/(triplets+straight+1),scores=choices.map(m=>{
+   let best=-Infinity,offset=0,accent=0;
+   for(let phase=0;phase<m.length;phase+=.5){let sums=0,hits=0,total=0;for(let i=0;i<bins.length;i++){const w=bins[i]+low[i]*1.5;total+=w;if(Math.abs(((i/12-phase+m.length)%m.length))<.09){sums+=w;hits++}}
+    const strength=total?sums/total:0,score=correlation(m.length)*.7+strength*m.length/2*.3;if(score>best){best=score;offset=phase;accent=strength}}
+   return {...m,score:best+(m.denominator===8?(compound-.5)*.12:0),offset,correlation:correlation(m.length),accent};
+  }).sort((a,b)=>b.score-a.score);
+  const best=scores[0],gap=best.score-scores[1].score,unusual=original.numerator===1,confidence=count<32||duration<12?'低':gap>.1&&best.correlation>.5?'高':gap>.025&&best.correlation>.35?'中':'低';
+  const differs=best.numerator!==original.numerator||best.denominator!==original.denominator;
+  if(scores[0].score-scores[1].score<.04)scores[0].ambiguous=true;
+  return {original:{numerator:original.numerator,denominator:original.denominator},suggested:best,scores,count,duration,confidence,remind:count>=32&&duration>=12&&(unusual||(differs&&confidence==='高')),reasons:[`分析開頭 ${Math.ceil(duration)} 個四分拍、${count} 個音符起點（含鼓軌），比較重複週期與低音／力度重音。`,`候選 ${best.numerator}/${best.denominator} 的週期相似度 ${(best.correlation*100).toFixed(0)} 分（相對指標，不是正確機率）。`,unusual?'原檔每小節只有一拍，可能將樂句切分得過密；這本身不能證明拍號錯誤。':'常見拍號不會僅因其他候選略優就自動改寫。',`可能的重音偏移約 ${best.offset} 個四分拍；弱起與小節起點仍需人工確認。`,gap<.04?'前兩個候選分數接近，可能存在二拍／四拍或單拍／複拍歧義，需試看小節分組。':'首選與其他候選有一定差距，但不是音樂學上的確定結論。',end<Infinity?'只建議調整起始拍號，後續拍號變化保留。':'未偵測到後續拍號變化。']};
+ }
+ function apply(project,meter){project.originalTimeSignatures??=JSON.parse(JSON.stringify(MidiMeter.normalize(project.timeSignatures)));const rows=MidiMeter.normalize(project.timeSignatures);project.timeSignatures=MidiMeter.normalize([{...rows[0],numerator:meter.numerator,denominator:meter.denominator},...rows.slice(1)])}
+ function review(project,automatic=false){const a=analyze(project);if(automatic&&!a.remind)return Promise.resolve(false);const $=id=>document.getElementById(id),dialog=$('meterAdviceDialog');$('meterAdviceOriginal').textContent=`原始拍號：${a.original.numerator}/${a.original.denominator} · 判斷可信度：${a.confidence}（啟發式）`;$('meterAdviceReasons').replaceChildren(...a.reasons.map(text=>{const li=document.createElement('li');li.textContent=text;return li}));const select=$('meterAdviceChoice');select.replaceChildren(...a.scores.map(m=>new Option(`${m.numerator}/${m.denominator} · 相對評分 ${m.score.toFixed(3)}`,`${m.numerator}/${m.denominator}`)));$('meterAdviceWarning').textContent=a.confidence==='低'?'證據不足，建議先保留原拍號；可人工選擇候選。':'建議只供參考，請對照實際強拍與樂句。';dialog.returnValue='';dialog.showModal();return new Promise(resolve=>{dialog.addEventListener('close',()=>{const accepted=dialog.returnValue==='apply';if(accepted){const [numerator,denominator]=select.value.split('/').map(Number);apply(project,{numerator,denominator})}resolve(accepted)},{once:true})})}
+ return {analyze,apply,review};
+})();

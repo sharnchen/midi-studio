@@ -1,0 +1,5 @@
+SpessaSynth Worklet processor, 4.4.1 (Apache-2.0): local change in createMIDIChannelInternal. Emit channelAdded before reset controller/patch events, so the main thread creates its channel mirror before applying initial state updates. This prevents undefined channel errors when adding the isolated preview channel.
+
+Studio transport: src/worklet-transport.js is injected before registerProcessor.
+Owns note dispatch and loop playback on the audio rendering thread, clears its
+queue on stop, and keeps audition/volume controls on the existing synth API.

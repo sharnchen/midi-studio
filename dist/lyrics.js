@@ -1,0 +1,19 @@
+window.StudioLyrics=(()=>{
+ let api=null,selected=null;const $=id=>document.getElementById(id);
+ const escape=text=>String(text).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ function decode(bytes){try{return new TextDecoder('utf-8',{fatal:true}).decode(bytes)}catch{return new TextDecoder('big5').decode(bytes)}}
+ function normalize(rows=[]){return rows.map(row=>({s:Number(row.s),text:String(row.text)})).sort((a,b)=>a.s-b.s)}
+ function current(rows,beat){let index=-1;for(let i=0;i<rows.length;i++){if(rows[i].s>beat)break;index=i}return index}
+ function update(project,beat){const rows=project.lyrics||[],index=current(rows,beat);$('lyricNow').hidden=!rows.length;$('lyricNow').textContent=index<0?'♫ 歌詞尚未開始':rows[index].text.replace(/[\r\n]+/g,' ');document.querySelectorAll('.scoreLyric').forEach(el=>el.classList.toggle('currentLyric',Number(el.dataset.lyricIndex)===index))}
+ function markup(project,x){return(project.lyrics||[]).map((row,i)=>`<text class="scoreLyric" data-lyric-index="${i}" x="${x(row.s)}" y="135" text-anchor="middle" font-size="12">${escape(row.text.replace(/[\r\n]+/g,' '))}</text>`).join('')}
+ function isEditing(){return !!document.getElementById('lyricsDialog')?.open}
+ function render(project,beat){update(project,beat);if(!api)return;const rows=project.lyrics||[];if(selected&&!rows.includes(selected)){selected=null;$('lyricText').value='';$('lyricApply').textContent='新增歌詞'}
+ const list=$('lyricList'),wrap=list.closest('.lyricTableWrap'),scroll=wrap?{top:wrap.scrollTop,left:wrap.scrollLeft}:null;list.replaceChildren();$('lyricEmpty').hidden=!!rows.length;
+ rows.forEach(row=>{const tr=document.createElement('tr'),time=document.createElement('td'),text=document.createElement('td'),actions=document.createElement('td');const measure=window.MidiMeter?MidiMeter.barAt(project.timeSignatures,row.s):{index:Math.floor(row.s/4),start:Math.floor(row.s/4)*4,meter:{denominator:4}};time.textContent='第 '+(measure.index+1)+' 小節 · '+((row.s-measure.start)/(4/measure.meter.denominator)+1).toFixed(2)+' 拍';text.textContent=row.text;
+ const edit=document.createElement('button');edit.type='button';edit.textContent='編輯';edit.onclick=()=>{selected=row;$('lyricBeat').value=row.s;$('lyricText').value=row.text;$('lyricApply').textContent='儲存修改';$('lyricText').focus({preventScroll:true})};
+ const remove=document.createElement('button');remove.type='button';remove.textContent='刪除';remove.onclick=()=>{api.checkpoint();project.lyrics=rows.filter(r=>r!==row);api.changed()};
+ const seek=document.createElement('button');seek.type='button';seek.textContent='定位';seek.onclick=()=>api.seek(row.s);actions.append(edit,remove,seek);tr.append(time,text,actions);list.append(tr)});if(scroll){wrap.scrollTop=scroll.top;wrap.scrollLeft=scroll.left}}
+ function init(callbacks){api=callbacks;$('lyricsUndo').onclick=()=>$('undo').click();$('lyricsOpen').onclick=()=>{api.pause?.();render(api.project(),api.beat());$('lyricsDialog').showModal()};$('lyricsClose').onclick=()=>$('lyricsDialog').close();$('lyricUsePosition').onclick=()=>{$('lyricBeat').value=Math.round(api.beat()*1000)/1000};$('lyricNew').onclick=()=>{selected=null;$('lyricText').value='';$('lyricApply').textContent='新增歌詞';$('lyricText').focus({preventScroll:true})};
+ $('lyricForm').onsubmit=e=>{e.preventDefault();const s=Number($('lyricBeat').value),text=$('lyricText').value;if(!Number.isFinite(s)||s<0||s>100000||!text.trim())return;const project=api.project();api.checkpoint();project.lyrics??=[];if(selected&&project.lyrics.includes(selected))Object.assign(selected,{s,text});else project.lyrics.push({s,text});project.lyrics.sort((a,b)=>a.s-b.s);selected=null;$('lyricText').value='';$('lyricApply').textContent='新增歌詞';api.changed()};render(api.project(),api.beat())}
+ return{decode,normalize,current,escape,markup,update,render,init,isEditing};
+})();

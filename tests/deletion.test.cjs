@@ -1,0 +1,6 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const src=fs.readFileSync('dist/app.js','utf8');const body=src.slice(src.indexOf('function focusNoteEditor('),src.indexOf('\nfunction showStaffSelection'));
+const a={p:60},b={p:64};const tracks=[{notes:[a]},{notes:[b]}];let checkpoints=0,changed=0,stopped=0,focused='';
+const box={selectedNotes:new Set(),selectedGroup:()=>[],project:{tracks},chosen:b,staffEdit:true,pause(){stopped++},clearPaletteDrag(){},finishRollGesture(){},finishStaffGesture(){},setStaffEditing(){box.staffEdit=true},checkpoint(){checkpoints++},changed(){changed++},$:id=>id==='scorePanel'?{hidden:false}:{focus(){focused=id}}};vm.createContext(box);vm.runInContext(body,box);
+assert(box.deleteEditorNote(b));assert.equal(tracks[0].notes.length,1);assert.equal(tracks[1].notes.length,0);assert.equal(box.chosen,null);assert.equal(checkpoints,1);assert.equal(stopped,1);assert.equal(focused,'scoreView');assert(!box.deleteEditorNote(b));assert(!box.deleteEditorNote(null));assert.equal(checkpoints,1);assert.equal(changed,1);
+console.log('PASS: delete actual owning track; clear selection; focus editor; stop before delete; stale selection is harmless');

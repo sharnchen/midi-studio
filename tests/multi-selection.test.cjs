@@ -1,0 +1,5 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const src=fs.readFileSync('dist/app.js','utf8');const section=src.slice(src.indexOf('let selectedNotes='),src.indexOf('\n',src.indexOf('function moveGroup(')));
+const a={p:1,s:1,d:1},b={p:125,s:4,d:2},c={p:70,s:7,d:1};const box={chosen:null,track:()=>({notes:[a,b,c]}),clamp:(x,a,b)=>Math.max(a,Math.min(b,x)),showStaffSelection(){},document:{querySelectorAll:()=>[]}};vm.createContext(box);vm.runInContext(section,box);
+box.chooseNote(a,{});box.chooseNote(b,{ctrlKey:true});assert.equal(box.selectedGroup().length,2);const items=box.groupSnapshot();box.moveGroup(items,-10,10);assert.equal(a.s,0);assert.equal(b.s,3);assert.equal(a.p,3);assert.equal(b.p,127);assert.equal(b.s-a.s,3);box.restoreGroup(items);assert.equal(a.s,1);assert.equal(b.p,125);box.chooseNote(a,{ctrlKey:true});assert.equal(box.selectedGroup().length,1);box.chooseNote(c,{});assert.equal(box.selectedGroup().length,1);box.chosen=null;assert.equal(box.selectedGroup().length,0);
+console.log('PASS: toggle, preserve group spacing, clamp whole group, cancel restore, clear stale selection');
