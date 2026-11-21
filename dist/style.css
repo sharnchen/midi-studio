@@ -87,3 +87,9 @@ header{height:34px;min-height:34px;padding:2px 10px;gap:6px}.brand{font-size:13p
 .staffCursor line:not(.scrubHandle){pointer-events:none}
 .staffCursor .scrubHandle{pointer-events:stroke;stroke:transparent!important;stroke-width:18}
 .staffCursor path{pointer-events:all}
+
+/* Automatically inferred harmonic annotations; not MIDI note events. */
+.chordToggle{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;font-size:11px;color:#40564e;cursor:pointer}
+.chordToggle input{accent-color:#16876c}
+.sheetSystem .chordSymbol{font:700 15px/1.1 system-ui,sans-serif;fill:#205d4d;stroke:none;pointer-events:none;user-select:none}
+.compactTracks .sheetSystem .chordSymbol{font-size:18px}
