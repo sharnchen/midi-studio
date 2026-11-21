@@ -1,6 +1,6 @@
 import { WorkletSynthesizer } from 'spessasynth_lib';
 let synth,context,loading,ready=false,previewTrack=null,previewPitch=null;
-let destinationNode,outputConnected=false;let masterLevel=.7;const timers=new Set(),configs=new Map();let transportGeneration=0,stopPending=Promise.resolve();
+let destinationNode,outputConnected=false;let masterLevel=.7,bankCache=null,resetPending=Promise.resolve();const timers=new Set(),configs=new Map();let transportGeneration=0,stopPending=Promise.resolve();
 async function load(ctx,destination,progress){
  if(ready)return;if(loading)return loading;
  context=ctx;let localSynth;
@@ -11,7 +11,7 @@ async function load(ctx,destination,progress){
   guard();const bank=new Uint8Array(manifest.bytes);let offset=0;for(const part of parts){bank.set(part,offset);offset+=part.length}
   await ctx.audioWorklet.addModule('./vendor/spessasynth_processor.min.js?v=20261031-controllers');guard();
   localSynth=new WorkletSynthesizer(ctx,{eventsEnabled:false});localSynth.setLogLevel(false,false,false);
-  await localSynth.soundBankManager.addSoundBank(bank.buffer,'GeneralUser GS');guard();await localSynth.isReady;guard();
+  bankCache=bank.slice();await localSynth.soundBankManager.addSoundBank(bank.buffer,'GeneralUser GS');guard();await localSynth.isReady;guard();
   for(let i=16;i<129;i++)localSynth.addNewChannel();await new Promise((resolve,reject)=>{let attempts=0;const check=()=>{try{guard();if(localSynth.midiChannels.length>=129)return resolve();if(++attempts>100)return reject(Error('128 音軌初始化失敗'));setTimeout(check,20)}catch(error){reject(error)}};check()});
   guard();synth=localSynth;destinationNode=destination;synth.connect(destination);outputConnected=true;ready=true;masterVolume(masterLevel);progress(100);
  },{timeoutMs:60000,label:'GM 音源載入',onCancel:cleanup}).catch(error=>{cleanup();loading=null;throw error});
@@ -37,4 +37,38 @@ function stop(){disconnectOutput();if(ready){
  stopPending=new Promise((resolve,reject)=>{const timeout=setTimeout(()=>{channel.port1.close();reject(Error('音訊排程停止逾時，請重新整理'))},5000);channel.port1.onmessage=()=>{clearTimeout(timeout);channel.port1.close();resolve()}});stopPending.catch(()=>{});
  synth.worklet.port.postMessage({type:'studioTransportStop',generation,ack:channel.port2},[channel.port2]);
  }for(const id of timers)clearTimeout(id);timers.clear();release();if(ready)synth.stopAll(true)}
-window.GMEngine={load,note,transport,retime,stopped:()=>stopPending,setLoop,hold,release,volume,mix,patch,masterVolume,stop,get outputConnected(){return outputConnected},get ready(){return ready},get voiceCount(){return synth?.voiceCount??0},get presets(){return synth?.presetList??[]}};
+
+// Recreate the worklet synthesizer on song replacement. stopAll() silences voices
+// but doesn't guarantee clearing old reverb/chorus buffers in the DSP instance.
+function resetSong(){
+ if(!ready||!bankCache)return Promise.resolve();
+ const operation=resetPending.catch(()=>{}).then(async()=>{
+  stop();
+  await stopped();
+  await context.resume();
+  const next=new WorkletSynthesizer(context,{eventsEnabled:false});
+  try{
+   next.setLogLevel(false,false,false);
+   await next.soundBankManager.addSoundBank(bankCache.slice().buffer,'GeneralUser GS');
+   await next.isReady;
+   for(let i=16;i<129;i++)next.addNewChannel();
+   for(let tries=0;next.midiChannels.length<129;tries++){
+    if(tries>=150)throw Error('重建音源通道逾時');
+    await new Promise(resolve=>setTimeout(resolve,20));
+   }
+   const previous=synth;
+   synth=next;
+   outputConnected=false;
+   configs.clear();
+   mixRevision=0;
+   masterVolume(masterLevel);
+   try{previous.stopAll(true);previous.disconnect(destinationNode)}catch{}
+  }catch(error){
+   try{next.stopAll(true);next.disconnect(destinationNode)}catch{}
+   throw error;
+  }
+ });
+ resetPending=operation;
+ return operation;
+}
+window.GMEngine={load,note,transport,retime,resetSong,stopped:()=>stopPending,setLoop,hold,release,volume,mix,patch,masterVolume,stop,get outputConnected(){return outputConnected},get ready(){return ready},get voiceCount(){return synth?.voiceCount??0},get presets(){return synth?.presetList??[]}};
