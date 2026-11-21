@@ -25,6 +25,18 @@ function sheetSystems(source,t,index,available){
    if(['keySignature','scoreClef','timeSignature'].some(c=>child.classList.contains(c)))continue;
    music.append(child.cloneNode(true));
   }
+  // Chord symbols are drawn once per system, above the first visible staff.
+  // Recalculated from current MIDI notes on each score render, including after edits.
+  if($('showChords')?.checked && index===($('allScoreTracks').checked?project.tracks.findIndex(row=>row.showInScore!==false):active)){
+   for(const chord of StudioChords.analyze(project,bar,Math.min(range.last,bar+barsPerLine))){
+    const label=document.createElementNS(ns,'text');
+    label.setAttribute('class','chordSymbol');
+    label.setAttribute('x',scoreX(chord.s)+7);
+    label.setAttribute('y','16');
+    label.textContent=chord.name;
+    music.append(label);
+   }
+  }
   StaffBeams.apply(music,t.notes,start,end,project.timeSignatures);
   // Empty measures use a whole-measure rest on each staff.
   for(let b=bar;b<Math.min(range.last,bar+barsPerLine);b++)for(const upper of [true,false]){
