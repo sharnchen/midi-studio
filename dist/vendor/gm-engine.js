@@ -38,7 +38,7 @@ function resetSong(){
   LA();
   await It;
   await dt.resume();
-  const next=new as(context,{eventsEnabled:false});
+  const next=new as(dt,{eventsEnabled:false});
   try{
    next.setLogLevel(false,false,false);
    await next.soundBankManager.addSoundBank(bankCache.slice().buffer,'GeneralUser GS');
