@@ -5,7 +5,7 @@ function sheetSystems(source,t,index,available){
  for(let bar=range.first;bar<range.last;bar+=barsPerLine){
   const start=MidiMeter.barStart(project.timeSignatures,bar),end=MidiMeter.barStart(project.timeSignatures,Math.min(range.last,bar+barsPerLine)),meter=MidiMeter.barAt(project.timeSignatures,start).meter,key=ScoreTimeline.keyAt(scoreKey(),scoreChanges(),start);
   const prefix=100+Math.abs(key.sf)*12,left=scoreX(start)-30,right=scoreX(end)-20,span=right-left;
-  const line=document.createElementNS(ns,'svg');line.classList.add('sheetSystem');if($('allScoreTracks').checked)line.setAttribute('preserveAspectRatio','none');line.setAttribute('viewBox',`0 -22 ${prefix+span+12} 270`);line.setAttribute('width',prefix+span+12);line.setAttribute('height','270');line.dataset.start=start;line.dataset.end=end;line.dataset.track=index;
+  const line=document.createElementNS(ns,'svg');line.classList.add('sheetSystem');if($('allScoreTracks').checked)line.setAttribute('preserveAspectRatio','none');line.setAttribute('viewBox',`0 -32 ${prefix+span+12} 280`);line.setAttribute('width',prefix+span+12);line.setAttribute('height','280');line.dataset.start=start;line.dataset.end=end;line.dataset.track=index;
   const header=document.createElementNS(ns,'g');header.setAttribute('class','sheetPrefix');
   let prefixParts=[];for(const bottom of [94,204])for(let i=0;i<5;i++)prefixParts.push(`<line x1="18" x2="${prefix}" y1="${bottom-i*10}" y2="${bottom-i*10}"/>`);
   prefixParts.push('<path d="M16 51 C2 56 18 112 7 129 C18 143 2 198 16 207" fill="none" stroke-width="2.4"/><line x1="18" x2="18" y1="54" y2="204"/><text x="22" y="88" font-size="49">𝄞</text><text x="25" y="195" font-size="43">𝄢</text>');
@@ -14,7 +14,7 @@ function sheetSystems(source,t,index,available){
   for(const bottom of [94,204])prefixParts.push(`<text class="systemTimeSignature" x="${62+Math.abs(key.sf)*12}" y="${bottom-25}" font-size="18">${meter.numerator}</text><text class="systemTimeSignature" x="${62+Math.abs(key.sf)*12}" y="${bottom-5}" font-size="18">${meter.denominator}</text>`);
   header.innerHTML=prefixParts.join('');line.append(header);
   const music=document.createElementNS(ns,'svg');music.classList.add('systemMusic');music.dataset.trackIndex=index;music.dataset.start=start;music.dataset.end=end;
-  music.setAttribute('x',prefix);music.setAttribute('y','-22');music.setAttribute('width',span+1);music.setAttribute('height','270');music.setAttribute('viewBox',`${left} -22 ${span+1} 270`);music.setAttribute('preserveAspectRatio','none');music.setAttribute('overflow','hidden');
+  music.setAttribute('x',prefix);music.setAttribute('y','-32');music.setAttribute('width',span+1);music.setAttribute('height','280');music.setAttribute('viewBox',`${left} -32 ${span+1} 280`);music.setAttribute('preserveAspectRatio','none');music.setAttribute('overflow','hidden');
   for(const child of source.children){
    if(child.classList.contains('scoreLyric')){const lyric=project.lyrics?.[Number(child.dataset.lyricIndex)];if(!lyric||lyric.s<start||lyric.s>=end)continue}
    if(child.classList.contains('staffNoteGroup')){const n=t.notes[Number(child.dataset.noteIndex)];if(n.s<start||n.s>=end)continue}
@@ -32,7 +32,7 @@ function sheetSystems(source,t,index,available){
     const label=document.createElementNS(ns,'text');
     label.setAttribute('class','chordSymbol');
     label.setAttribute('x',scoreX(chord.s)+7);
-    label.setAttribute('y','0');
+    label.setAttribute('y','-10');
     label.setAttribute('font-size','18');
     label.setAttribute('font-weight','700');
     label.setAttribute('fill','#11735b');
