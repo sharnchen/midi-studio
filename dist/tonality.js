@@ -27,7 +27,7 @@
  }
  function estimate(tracks,preferred={sf:0,minor:0}){
   const bins=weights(tracks),sum=bins.reduce((s,v)=>s+v,0);
-  if(sum<=0)return{key:{...preferred},confidence:0,ambiguous:true,alternatives:[],bins};
+  if(sum<=0)return{key:{...preferred},score:0,margin:0,confidence:0,ambiguous:true,alternatives:[],bins};
   const candidates=[];
   for(let sf=-7;sf<=7;sf++)for(let mode=0;mode<2;mode++){
    const root=(mode?minorRoots:majorRoots)[sf+7];
