@@ -277,7 +277,7 @@ window.addEventListener('blur',clearPaletteDrag);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){clearPaletteDrag();finishRollGesture(true);finishStaffGesture(true);stopHeldNote()}});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)clearPaletteDrag()});
 
-$('allScoreTracks').onchange=()=>{renderScore();centerScoreTrack()};
+$('allScoreTracks').onchange=()=>{renderScore();centerScoreTrack()};$('showChords').onchange=()=>renderScore();
 
 window.addEventListener('pointerup',()=>{if(scoreFocusPending){scoreFocusPending=false;requestAnimationFrame(centerScoreTrack)}});window.addEventListener('resize',()=>requestAnimationFrame(centerScoreTrack));
 
