@@ -144,6 +144,13 @@ function renderScore(){
  $('meterAdviceRestore').hidden=!project.originalTimeSignatures;
  if(playing&&!editingScoreView())ScoreWindow.follow(project,length(),beat);const range=ScoreWindow.range(project,length());$('scorePageInfo').textContent='第 '+(range.first+1)+'–'+range.last+' 小節／共 '+range.total+' 小節';$('scorePage').value=range.page+1;$('scorePage').max=range.pages;$('scorePrev').disabled=range.page===0;$('scoreNext').disabled=range.page===range.pages-1;$('scoreLongNotice').textContent=ScoreWindow.warning(project);$('scoreLongNotice').hidden=!$('scoreLongNotice').textContent;const meter=MidiMeter.barAt(project.timeSignatures,beat).meter;document.querySelector('.meter').textContent=meter.numerator+' / '+meter.denominator;
  stopHeldNote();if($('scorePanel').hidden)return;
+  const chordRange=ScoreWindow.range(project,length());
+  const chordRows=StudioChords.analyze(project,chordRange.first,chordRange.last);
+  const indicator=$('chordSummary');
+  if(indicator){indicator.textContent=$('showChords').checked
+   ?'和弦：'+chordRows.length+' / '+(chordRange.last-chordRange.first)+' 小節'+(chordRows.length?' · 首個第 '+(chordRows[0].bar+1)+' 小節':' · 無可辨識和弦')
+   :'和弦顯示已關閉';
+   indicator.title='從非打擊樂音軌推測和弦；無音符時留白';}
  const all=$('allScoreTracks').checked,tracks=all?project.tracks.filter(t=>t.showInScore!==false):[track()];
  const view=$('scoreView');view.classList.toggle('compactTracks',all);const editScroll=editingScoreView()?{top:view.scrollTop,left:view.scrollLeft}:null;view.replaceChildren();
  if(all&&!tracks.length){const empty=document.createElement('p');empty.className='scoreEmpty';empty.textContent='未勾選顯示音軌，請在左側音軌屬性勾選「顯示於多軌譜面」。';view.append(empty)}
