@@ -38,7 +38,7 @@
    if(support<form.degrees.length)continue;
    const rootWeight=weights[root]/total;
    const bassMatch=bassPitch!==undefined&&pc(bassPitch)===root;
-   const score=coverage*2+rootWeight*.3+(bassMatch?.15:0)+form.bias;
+   const score=coverage*2+rootWeight*.3+(bassMatch ? .15 : 0)+form.bias;
    if(!best||score>best.score)best={root,form,coverage,score};
   }
   if(!best||best.coverage<.69)return null;
