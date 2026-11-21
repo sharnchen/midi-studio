@@ -32,7 +32,10 @@ function sheetSystems(source,t,index,available){
     const label=document.createElementNS(ns,'text');
     label.setAttribute('class','chordSymbol');
     label.setAttribute('x',scoreX(chord.s)+7);
-    label.setAttribute('y','16');
+    label.setAttribute('y','18');
+    label.setAttribute('font-size','18');
+    label.setAttribute('font-weight','700');
+    label.setAttribute('fill','#11735b');
     label.textContent=chord.name;
     music.append(label);
    }
